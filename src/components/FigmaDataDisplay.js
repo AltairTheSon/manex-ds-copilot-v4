@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import JsonViewer from './JsonViewer';
 
 const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -12,6 +13,7 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
     user: null
   });
   const [error, setError] = useState({});
+  const [showFullDocument, setShowFullDocument] = useState(false);
 
   const loadData = useCallback(async (dataType, apiCall) => {
     if (data[dataType] !== null) return;
@@ -42,7 +44,7 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
   useEffect(() => {
     // Initial load for the overview tab is already done via fileData
     loadUserData();
-  }, [loadUserData]); // Add loadUserData as a dependency
+  }, [loadUserData]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -65,6 +67,15 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
         break;
     }
   };
+
+  // Calculate document size to warn about performance
+  const getDocumentSize = () => {
+    if (!data.overview?.document) return 0;
+    return JSON.stringify(data.overview.document).length;
+  };
+  
+  const documentSize = getDocumentSize();
+  const isLargeDocument = documentSize > 1000000; // 1MB JSON is quite large
 
   return (
     <div className="data-section">
@@ -113,7 +124,41 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
               <p><strong>Schema Version:</strong> {data.overview.schemaVersion}</p>
               
               <h4 className="mt-4">Document Structure</h4>
-              <pre>{JSON.stringify(data.overview.document, null, 2)}</pre>
+              
+              {isLargeDocument && (
+                <div className="card" style={{ backgroundColor: 'var(--bg-darker)', marginBottom: '1rem' }}>
+                  <p className="text-error">
+                    <i className="ri-alert-line"></i> Large document detected ({Math.round(documentSize / 1024 / 1024 * 10) / 10} MB)
+                  </p>
+                  <p>Displaying the full document structure may cause performance issues.</p>
+                  
+                  {!showFullDocument ? (
+                    <button 
+                      className="mt-4"
+                      style={{ backgroundColor: 'var(--error)' }}
+                      onClick={() => setShowFullDocument(true)}
+                    >
+                      <i className="ri-eye-line"></i> Show Full Document Structure Anyway
+                    </button>
+                  ) : (
+                    <button 
+                      className="mt-4"
+                      onClick={() => setShowFullDocument(false)}
+                    >
+                      <i className="ri-eye-off-line"></i> Hide Full Document Structure
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {(!isLargeDocument || showFullDocument) && (
+                <div className="json-container">
+                  <JsonViewer 
+                    data={data.overview.document}
+                    initialExpansionDepth={1}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -143,16 +188,24 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
           <div className="card">
             <h3>Components</h3>
             {data.components.meta?.components?.length > 0 ? (
-              <div className="component-library">
-                {data.components.meta.components.map(component => (
-                  <div key={component.key} className="component-item">
-                    <div className="component-info">
-                      <h4>{component.name}</h4>
-                      <p className="text-secondary">ID: {component.key}</p>
-                      <div className="badge">{component.description || 'No description'}</div>
+              <div>
+                <p>Found {data.components.meta.components.length} components in this file.</p>
+                <div className="component-library">
+                  {data.components.meta.components.slice(0, 100).map(component => (
+                    <div key={component.key} className="component-item">
+                      <div className="component-info">
+                        <h4>{component.name}</h4>
+                        <p className="text-secondary">ID: {component.key}</p>
+                        <div className="badge">{component.description || 'No description'}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {data.components.meta.components.length > 100 && (
+                  <p className="text-secondary mt-4">
+                    Showing 100 of {data.components.meta.components.length} components.
+                  </p>
+                )}
               </div>
             ) : (
               <p>No components found in this file.</p>
@@ -175,15 +228,23 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
           <div className="card">
             <h3>Styles</h3>
             {data.styles.meta?.styles?.length > 0 ? (
-              <div className="grid">
-                {data.styles.meta.styles.map(style => (
-                  <div key={style.key} className="card">
-                    <h4>{style.name}</h4>
-                    <p><strong>Type:</strong> {style.style_type}</p>
-                    <p><strong>ID:</strong> {style.key}</p>
-                    <p><strong>Description:</strong> {style.description || 'No description'}</p>
-                  </div>
-                ))}
+              <div>
+                <p>Found {data.styles.meta.styles.length} styles in this file.</p>
+                <div className="grid">
+                  {data.styles.meta.styles.slice(0, 100).map(style => (
+                    <div key={style.key} className="card">
+                      <h4>{style.name}</h4>
+                      <p><strong>Type:</strong> {style.style_type}</p>
+                      <p><strong>ID:</strong> {style.key}</p>
+                      <p><strong>Description:</strong> {style.description || 'No description'}</p>
+                    </div>
+                  ))}
+                </div>
+                {data.styles.meta.styles.length > 100 && (
+                  <p className="text-secondary mt-4">
+                    Showing 100 of {data.styles.meta.styles.length} styles.
+                  </p>
+                )}
               </div>
             ) : (
               <p>No styles found in this file.</p>
@@ -208,7 +269,13 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
             {Object.keys(data.images.images || {}).length > 0 ? (
               <div>
                 <p>Found {Object.keys(data.images.images).length} images in the file.</p>
-                <pre>{JSON.stringify(data.images, null, 2)}</pre>
+                
+                <div className="mt-4">
+                  <JsonViewer 
+                    data={data.images}
+                    initialExpansionDepth={1}
+                  />
+                </div>
               </div>
             ) : (
               <p>No images found in this file.</p>
@@ -232,7 +299,8 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
             <h3>Comments</h3>
             {data.comments.comments?.length > 0 ? (
               <div>
-                {data.comments.comments.map(comment => (
+                <p>Found {data.comments.comments.length} comments in this file.</p>
+                {data.comments.comments.slice(0, 50).map(comment => (
                   <div key={comment.id} className="card mb-4">
                     <div className="flex justify-between">
                       <h4>{comment.user.handle}</h4>
@@ -248,6 +316,11 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
                     )}
                   </div>
                 ))}
+                {data.comments.comments.length > 50 && (
+                  <p className="text-secondary">
+                    Showing 50 of {data.comments.comments.length} comments.
+                  </p>
+                )}
               </div>
             ) : (
               <p>No comments found in this file.</p>
