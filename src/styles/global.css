@@ -285,3 +285,54 @@ pre {
   margin-bottom: 0.5rem;
   font-weight: 500;
 }
+.json-viewer {
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  background-color: var(--bg-darker);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 600px;
+}
+
+.json-toggle {
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+.json-toggle:hover {
+  text-decoration: underline;
+}
+
+.json-key {
+  color: var(--primary-light);
+  margin-right: 0.5rem;
+}
+
+.json-string {
+  color: #9ccc65;
+}
+
+.json-number {
+  color: #ffca28;
+}
+
+.json-boolean {
+  color: #ff7043;
+}
+
+.json-preview {
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
+.json-item {
+  margin: 2px 0;
+}
+
+.json-children {
+  margin-left: 1rem;
+}
