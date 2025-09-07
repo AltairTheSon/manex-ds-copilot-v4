@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -13,12 +13,7 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
   });
   const [error, setError] = useState({});
 
-  useEffect(() => {
-    // Initial load for the overview tab is already done via fileData
-    loadUserData();
-  }, []);
-
-  const loadData = async (dataType, apiCall) => {
+  const loadData = useCallback(async (dataType, apiCall) => {
     if (data[dataType] !== null) return;
 
     setLoading(prev => ({ ...prev, [dataType]: true }));
@@ -36,13 +31,18 @@ const FigmaDataDisplay = ({ figmaApi, fileId, fileData }) => {
     } finally {
       setLoading(prev => ({ ...prev, [dataType]: false }));
     }
-  };
+  }, [data]);
 
-  const loadComponentsData = () => loadData('components', () => figmaApi.getFileComponents(fileId));
-  const loadStylesData = () => loadData('styles', () => figmaApi.getFileStyles(fileId));
-  const loadImagesData = () => loadData('images', () => figmaApi.getFileImages(fileId));
-  const loadCommentsData = () => loadData('comments', () => figmaApi.getFileComments(fileId));
-  const loadUserData = () => loadData('user', () => figmaApi.getUserInfo());
+  const loadComponentsData = useCallback(() => loadData('components', () => figmaApi.getFileComponents(fileId)), [loadData, figmaApi, fileId]);
+  const loadStylesData = useCallback(() => loadData('styles', () => figmaApi.getFileStyles(fileId)), [loadData, figmaApi, fileId]);
+  const loadImagesData = useCallback(() => loadData('images', () => figmaApi.getFileImages(fileId)), [loadData, figmaApi, fileId]);
+  const loadCommentsData = useCallback(() => loadData('comments', () => figmaApi.getFileComments(fileId)), [loadData, figmaApi, fileId]);
+  const loadUserData = useCallback(() => loadData('user', () => figmaApi.getUserInfo()), [loadData, figmaApi]);
+
+  useEffect(() => {
+    // Initial load for the overview tab is already done via fileData
+    loadUserData();
+  }, [loadUserData]); // Add loadUserData as a dependency
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
